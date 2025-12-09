@@ -3,20 +3,27 @@ package org.example;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FileProcessor {
+    private static final Logger logger = LogManager.getLogger(FileProcessor.class);
+
     public String findLongestLineByWords(String filePath) throws IOException {
         String longestLine = "";
         int maxWords = -1;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String currentLine;
+            int lineCount = 0;
             while ((currentLine = reader.readLine()) != null) {
+                lineCount++;
                 String[] words = currentLine.trim().split("\\s+");
+                int currentWordCount = (int) Arrays.stream(words).filter(w -> !w.isEmpty()).count();
 
-                int currentWordCount = (int) Arrays.stream(words).filter(word -> !word.isEmpty()).count();
+                logger.debug("Line {} has {} words.", lineCount, currentWordCount);
 
                 if (currentWordCount > maxWords) {
                     maxWords = currentWordCount;
@@ -24,11 +31,10 @@ public class FileProcessor {
                 }
             }
         }
-
         if (maxWords == -1) {
-            return "This file does not contain words";
+            logger.warn("File {} was empty or contained no words.", filePath);
+            return "File is empty or contains no words";
         }
-
         return longestLine;
     }
 
@@ -36,43 +42,43 @@ public class FileProcessor {
         if (key == null || key.isEmpty()) {
             throw new IllegalArgumentException("Key cannot be empty");
         }
-
         char keyChar = key.charAt(0);
+        logger.debug("Cipher operation: {} with key: {}", (encrypt ? "ENCRYPT" : "DECRYPT"), keyChar);
 
-        try {
-            if (encrypt) {
-                try (Reader fr = new FileReader(sourcePath);
-                     Writer fw = new FileWriter(destPath);
-                     CipherWriter writer = new CipherWriter(fw, keyChar)) {
-                    int character;
-                    while ((character = fr.read()) != -1) {
-                        writer.write(character);
-                    }
-                    System.out.println("File successfully encrypted: " + destPath);
+        if (encrypt) {
+            try (Reader fr = new FileReader(sourcePath);
+                 Writer fw = new FileWriter(destPath);
+                 CipherWriter writer = new CipherWriter(fw, keyChar)) {
+                int c;
+                long charsProcessed = 0;
+                while ((c = fr.read()) != -1) {
+                    writer.write(c);
+                    charsProcessed++;
                 }
-            } else {
-                try (Reader fr = new FileReader(sourcePath);
-                     DecipherReader reader = new DecipherReader(fr, keyChar);
-                     Writer fw = new FileWriter(destPath)) {
-                    int character;
-                    while ((character = reader.read()) != -1) {
-                        fw.write(character);
-                    }
-                    System.out.println("File successfully decrypted: " + destPath);
-                }
+                logger.debug("Encrypted {} characters to {}", charsProcessed, destPath);
             }
-        } catch (IOException e) {
-            throw new IOException("Error during encrypting/decrypting: " + e.getMessage(), e);
+        } else {
+            try (Reader fr = new FileReader(sourcePath);
+                 DecipherReader reader = new DecipherReader(fr, keyChar);
+                 Writer fw = new FileWriter(destPath)) {
+                int c;
+                long charsProcessed = 0;
+                while ((c = reader.read()) != -1) {
+                    fw.write(c);
+                    charsProcessed++;
+                }
+                logger.debug("Decrypted {} characters to {}", charsProcessed, destPath);
+            }
         }
     }
 
     public Map<String, Integer> countHtmlTags(String urlString) throws IOException {
         Map<String, Integer> tagCounts = new HashMap<>();
-        Pattern tagPattern = Pattern.compile("<(\\w+)[\\s>/]");
+        Pattern tagPattern = Pattern.compile("<(\\w+)[\\s>].*?");
 
+        logger.debug("Connecting to {}", urlString);
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new URL(urlString).openStream()))) {
-
             String line;
             while ((line = reader.readLine()) != null) {
                 Matcher matcher = tagPattern.matcher(line);
@@ -82,34 +88,32 @@ public class FileProcessor {
                 }
             }
         }
+        logger.debug("Found {} unique tags.", tagCounts.size());
         return tagCounts;
     }
 
-
     public void printSortedByTag(Map<String, Integer> tags) {
         Map<String, Integer> sorted = new TreeMap<>(tags);
-
-        System.out.println("--- Sorting by tags ---");
+        System.out.println("--- Tags (Lexicographical Order) ---");
         for (Map.Entry<String, Integer> entry : sorted.entrySet()) {
-            System.out.printf("Tag: <%s>, Frequency: %d%n", entry.getKey(), entry.getValue());
+            System.out.printf("Tag: <%s> - %d%n", entry.getKey(), entry.getValue());
         }
     }
 
     public void printSortedByFrequency(Map<String, Integer> tags) {
         List<Map.Entry<String, Integer>> list = new ArrayList<>(tags.entrySet());
+        list.sort(Map.Entry.comparingByValue());
 
-        list.sort(Comparator.comparingInt(Map.Entry::getValue));
-
-        System.out.println("--- Sorting by frequency ---");
+        System.out.println("--- Tags (Frequency Order) ---");
         for (Map.Entry<String, Integer> entry : list) {
-            System.out.printf("Tag: <%s>, Frequency: %d%n", entry.getKey(), entry.getValue());
+            System.out.printf("Tag: <%s> - %d%n", entry.getKey(), entry.getValue());
         }
     }
 
     public static void createDummyFile(String filePath, String content) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write(content);
-            System.out.println("Dummy input file created: " + filePath);
+            logger.info("Created dummy file: {}", filePath);
         }
     }
 }

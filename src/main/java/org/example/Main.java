@@ -1,100 +1,107 @@
 package org.example;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
-import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
+    private static final Logger logger = LogManager.getLogger(Main.class);
+
     public static void main(String[] args) {
         FileProcessor processor = new FileProcessor();
-
         try (Scanner scanner = new Scanner(System.in)) {
             int choice = -1;
+            while (choice != 0) {
+                System.out.println("\n--- Lab 5 + Log4j 2 ---");
+                System.out.println("1. Task 1: Find line with max words");
+                System.out.println("2. Task 3: Cipher/Decipher file");
+                System.out.println("3. Task 4: HTML Tag Frequency");
+                System.out.println("0. Exit");
+                System.out.print("Enter choice: ");
 
-            System.out.println("\n--- Select Task ---");
-            System.out.println("1. Run Task 1 (Find longest line by words)");
-            System.out.println("2. Run Task 3 (Character Stream Cipher)");
-            System.out.println("3. Run Task 4 (Count HTML Tags)");
-            System.out.println("0. Exit");
-            System.out.print("Enter choice: ");
+                if (scanner.hasNextInt()) {
+                    choice = scanner.nextInt();
+                    scanner.nextLine();
+                } else {
+                    logger.warn("User entered non-integer input.");
+                    scanner.nextLine();
+                    continue;
+                }
 
-            if (scanner.hasNextInt()) {
-                choice = scanner.nextInt();
-                scanner.nextLine();
-            } else {
-                System.err.println("Invalid input. Please enter a number.");
-                scanner.nextLine();
-            }
+                logger.info("User selected option: {}", choice);
 
-            switch (choice) {
-                case 1:
-                    runTask1(scanner, processor);
-                    break;
-                case 2:
-                    runTask3(scanner, processor);
-                    break;
-                case 3:
-                    runTask4(scanner, processor);
-                    break;
-                case 0:
-                    System.out.println("Exiting application.");
-                    break;
-                default:
-                    System.err.println("Invalid choice. Please select from the menu.");
+                switch (choice) {
+                    case 1:
+                        runTask1(scanner, processor);
+                        break;
+                    case 2:
+                        runTask3(scanner, processor);
+                        break;
+                    case 3:
+                        runTask4(scanner, processor);
+                        break;
+                    case 0:
+                        logger.info("Application exit requested.");
+                        break;
+                    default:
+                        logger.warn("Invalid menu selection: {}", choice);
+                }
             }
         }
     }
 
     private static void runTask1(Scanner scanner, FileProcessor processor) {
-        System.out.println("\n--- Task 1: Find the line with maximum words ---");
         System.out.print("Enter path to the text file: ");
         String textFilePath = scanner.nextLine();
-
         try {
+            logger.debug("Starting Task 1 with file: {}", textFilePath);
             String longestLine = processor.findLongestLineByWords(textFilePath);
-            System.out.println("Result: " + longestLine);
+            System.out.println("Result line: " + longestLine);
+            logger.info("Task 1 completed successfully.");
         } catch (IOException e) {
-            System.err.println("ERROR (Task 1): Failed to read file. " + e.getMessage());
+            logger.error("Error in Task 1", e);
         }
     }
 
     private static void runTask3(Scanner scanner, FileProcessor processor) {
-        System.out.println("\n--- Task 3: Character Stream Encryption/Decryption ---");
-        System.out.print("Enter key character for encryption (e.g., 'A'): ");
+        System.out.print("Enter key character for encryption: ");
         String key = scanner.nextLine();
 
-        String sourceEncrypt = "input.txt";
-        String destEncrypt = "encrypted.txt";
-        String destDecrypt = "decrypted.txt";
+        String sourceFile = "input.txt";
+        String encryptedFile = "encrypted.txt";
+        String decryptedFile = "decrypted.txt";
 
         try {
-            FileProcessor.createDummyFile(sourceEncrypt, "This is the source text to be encrypted.");
+            FileProcessor.createDummyFile(sourceFile, "Hello Log4j World!");
 
-            processor.encryptDecrypt(sourceEncrypt, destEncrypt, key, true);
+            logger.debug("Starting encryption process...");
+            processor.encryptDecrypt(sourceFile, encryptedFile, key, true);
 
-            processor.encryptDecrypt(destEncrypt, destDecrypt, key, false);
+            logger.debug("Starting decryption process...");
+            processor.encryptDecrypt(encryptedFile, decryptedFile, key, false);
 
+            logger.info("Task 3 completed. Check files.");
         } catch (Exception e) {
-            System.err.println("ERROR (Task 3): An error occurred during cipher process. " + e.getMessage());
+            logger.error("Error in Task 3", e);
         }
     }
 
     private static void runTask4(Scanner scanner, FileProcessor processor) {
-        System.out.println("\n--- Task 4: Count HTML Tags Frequency ---");
         System.out.print("Enter URL to analyze: ");
         String urlString = scanner.nextLine();
 
         try {
-            Map<String, Integer> tagCounts = processor.countHtmlTags(urlString);
-
+            logger.debug("Starting Task 4 for URL: {}", urlString);
+            var tagCounts = processor.countHtmlTags(urlString);
             processor.printSortedByTag(tagCounts);
-            System.out.println();
             processor.printSortedByFrequency(tagCounts);
-
+            logger.info("Task 4 completed successfully.");
         } catch (IOException e) {
-            System.err.println("ERROR (Task 4): Failed to open or read the URL/network error. " + e.getMessage());
+            logger.error("Network/IO Error in Task 4", e);
         } catch (IllegalArgumentException e) {
-            System.err.println("ERROR (Task 4): Check the correctness of the entered URL. " + e.getMessage());
+            logger.error("Invalid URL in Task 4", e);
         }
     }
 }
