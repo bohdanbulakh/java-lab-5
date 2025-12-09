@@ -4,27 +4,36 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.Scanner;
 
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);
+    private static ResourceBundle bundle = ResourceBundle.getBundle("location.messages", Locale.US);
 
     public static void main(String[] args) {
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            logger.error("Failed to set UTF-8 console output", e);
+        }
+
         FileProcessor processor = new FileProcessor();
-        try (Scanner scanner = new Scanner(System.in)) {
+
+
+        try (Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8)) {
             int choice = -1;
             while (choice != 0) {
-                System.out.println("\n--- Lab 5 + Log4j 2 ---");
-                System.out.println("1. Task 1: Find line with max words");
-                System.out.println("2. Task 3: Cipher/Decipher file");
-                System.out.println("3. Task 4: HTML Tag Frequency");
-                System.out.println("0. Exit");
-                System.out.print("Enter choice: ");
+                printMenu();
 
                 if (scanner.hasNextInt()) {
                     choice = scanner.nextInt();
                     scanner.nextLine();
                 } else {
+                    System.err.println(bundle.getString("error.invalid_int"));
                     logger.warn("User entered non-integer input.");
                     scanner.nextLine();
                     continue;
@@ -42,23 +51,51 @@ public class Main {
                     case 3:
                         runTask4(scanner, processor);
                         break;
+                    case 4:
+                        changeLanguage(scanner);
+                        break;
                     case 0:
+                        System.out.println(bundle.getString("msg.exit"));
                         logger.info("Application exit requested.");
                         break;
                     default:
+                        System.err.println(bundle.getString("error.invalid_choice"));
                         logger.warn("Invalid menu selection: {}", choice);
                 }
             }
         }
     }
 
+    private static void printMenu() {
+        System.out.println(bundle.getString("menu.title"));
+        System.out.println(bundle.getString("menu.task1"));
+        System.out.println(bundle.getString("menu.task3"));
+        System.out.println(bundle.getString("menu.task4"));
+        System.out.println(bundle.getString("menu.lang"));
+        System.out.println(bundle.getString("menu.exit"));
+        System.out.print(bundle.getString("prompt.choice"));
+    }
+
+    private static void changeLanguage(Scanner scanner) {
+        System.out.print(bundle.getString("lang.prompt"));
+        String langCode = scanner.nextLine().trim().toLowerCase();
+
+        if (langCode.equals("uk")) {
+            bundle = ResourceBundle.getBundle("location.messages", new Locale("uk"));
+        } else {
+            bundle = ResourceBundle.getBundle("location.messages", Locale.US);
+        }
+        System.out.println(bundle.getString("lang.success"));
+        logger.info("Language changed to: {}", langCode);
+    }
+
     private static void runTask1(Scanner scanner, FileProcessor processor) {
-        System.out.print("Enter path to the text file: ");
+        System.out.print(bundle.getString("task1.prompt"));
         String textFilePath = scanner.nextLine();
         try {
             logger.debug("Starting Task 1 with file: {}", textFilePath);
             String longestLine = processor.findLongestLineByWords(textFilePath);
-            System.out.println("Result line: " + longestLine);
+            System.out.println(bundle.getString("task1.result") + longestLine);
             logger.info("Task 1 completed successfully.");
         } catch (IOException e) {
             logger.error("Error in Task 1", e);
@@ -66,7 +103,7 @@ public class Main {
     }
 
     private static void runTask3(Scanner scanner, FileProcessor processor) {
-        System.out.print("Enter key character for encryption: ");
+        System.out.print(bundle.getString("task3.prompt"));
         String key = scanner.nextLine();
 
         String sourceFile = "input.txt";
@@ -82,6 +119,7 @@ public class Main {
             logger.debug("Starting decryption process...");
             processor.encryptDecrypt(encryptedFile, decryptedFile, key, false);
 
+            System.out.println(bundle.getString("task3.done"));
             logger.info("Task 3 completed. Check files.");
         } catch (Exception e) {
             logger.error("Error in Task 3", e);
@@ -89,7 +127,7 @@ public class Main {
     }
 
     private static void runTask4(Scanner scanner, FileProcessor processor) {
-        System.out.print("Enter URL to analyze: ");
+        System.out.print(bundle.getString("task4.prompt"));
         String urlString = scanner.nextLine();
 
         try {
